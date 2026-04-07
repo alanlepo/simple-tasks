@@ -110,6 +110,28 @@
     border-radius: 20px;
     padding: 1px 7px;
   }
+  .sort-btns {
+    margin-left: auto;
+    display: flex;
+    gap: 4px;
+  }
+  .sort-btn {
+    font-size: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1px solid var(--border2);
+    background: transparent;
+    color: var(--text3);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .sort-btn.active {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-color: rgba(200,240,96,0.3);
+  }
 
   /* Task */
   .task-list { padding: 0 16px; display: flex; flex-direction: column; gap: 2px; }
@@ -354,6 +376,10 @@
     <div class="section-head">
       <span class="section-label">Open</span>
       <span class="section-count" id="open-count">0</span>
+      <div class="sort-btns">
+        <button class="sort-btn active" id="open-sort-date" onclick="setSort('open','date')">Date</button>
+        <button class="sort-btn" id="open-sort-alpha" onclick="setSort('open','alpha')">A–Z</button>
+      </div>
     </div>
     <div class="task-list" id="open-list"></div>
 
@@ -362,6 +388,10 @@
     <div class="section-head">
       <span class="section-label">Done</span>
       <span class="section-count" id="done-count">0</span>
+      <div class="sort-btns">
+        <button class="sort-btn active" id="done-sort-date" onclick="setSort('done','date')">Date</button>
+        <button class="sort-btn" id="done-sort-alpha" onclick="setSort('done','alpha')">A–Z</button>
+      </div>
     </div>
     <div class="task-list" id="done-list"></div>
   </div>
@@ -383,6 +413,32 @@ const STORAGE_KEY = 'tasks_v1';
 
 let tasks = [];
 let deferredInstall = null;
+let sortOpen = 'date';
+let sortDone = 'date';
+
+function setSort(list, mode) {
+  if (list === 'open') sortOpen = mode;
+  else sortDone = mode;
+  document.getElementById('open-sort-date').classList.toggle('active', sortOpen === 'date');
+  document.getElementById('open-sort-alpha').classList.toggle('active', sortOpen === 'alpha');
+  document.getElementById('done-sort-date').classList.toggle('active', sortDone === 'date');
+  document.getElementById('done-sort-alpha').classList.toggle('active', sortDone === 'alpha');
+  render();
+}
+
+function applySortOpen(items) {
+  const arr = [...items];
+  if (sortOpen === 'alpha') arr.sort((a,b) => a.title.localeCompare(b.title));
+  else arr.sort((a,b) => new Date(b.created) - new Date(a.created));
+  return arr;
+}
+
+function applySortDone(items) {
+  const arr = [...items];
+  if (sortDone === 'alpha') arr.sort((a,b) => a.title.localeCompare(b.title));
+  else arr.sort((a,b) => new Date(b.completedAt||b.created) - new Date(a.completedAt||a.created));
+  return arr;
+}
 
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
@@ -420,8 +476,8 @@ function fmtDate(iso) {
 }
 
 function render() {
-  const open = tasks.filter(t => !t.done);
-  const done = tasks.filter(t => t.done);
+  const open = applySortOpen(tasks.filter(t => !t.done));
+  const done = applySortDone(tasks.filter(t => t.done));
 
   document.getElementById('open-count').textContent = open.length;
   document.getElementById('done-count').textContent = done.length;
