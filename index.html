@@ -9,6 +9,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tasks">
 <title>Tasks</title>
+<link rel="manifest" id="manifest-link">
+<link rel="apple-touch-icon" id="apple-icon">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap');
 
@@ -584,6 +586,59 @@ if ('serviceWorker' in navigator) {
 
 load();
 render();
+
+(function() {
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  const r = size * 0.22;
+  ctx.fillStyle = '#0f0f0f';
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.lineTo(size - r, 0);
+  ctx.quadraticCurveTo(size, 0, size, r);
+  ctx.lineTo(size, size - r);
+  ctx.quadraticCurveTo(size, size, size - r, size);
+  ctx.lineTo(r, size);
+  ctx.quadraticCurveTo(0, size, 0, size - r);
+  ctx.lineTo(0, r);
+  ctx.quadraticCurveTo(0, 0, r, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#c8f060';
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, size * 0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = '#0f0f0f';
+  ctx.lineWidth = size * 0.09;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(size * 0.3, size * 0.5);
+  ctx.lineTo(size * 0.45, size * 0.65);
+  ctx.lineTo(size * 0.72, size * 0.37);
+  ctx.stroke();
+
+  const iconUrl = canvas.toDataURL('image/png');
+  document.getElementById('apple-icon').href = iconUrl;
+
+  const manifest = {
+    name: 'Tasks',
+    short_name: 'Tasks',
+    start_url: '.',
+    display: 'standalone',
+    background_color: '#0f0f0f',
+    theme_color: '#0f0f0f',
+    icons: [{ src: iconUrl, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }]
+  };
+  const mblob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+  document.getElementById('manifest-link').href = URL.createObjectURL(mblob);
+})();
 </script>
 </body>
 </html>
