@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0f0f0f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tasks">
+<title>Tasks</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #222;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #f0ede8;
+    --text2: #888;
+    --text3: #555;
+    --accent: #c8f060;
+    --accent-dim: rgba(200,240,96,0.12);
+    --accent-text: #0f0f0f;
+    --done-color: #4a9970;
+    --done-bg: rgba(74,153,112,0.1);
+    --red: #e05a4e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    overscroll-behavior: none;
+  }
+
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  .header {
+    padding: 56px 24px 20px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 10;
+  }
+  .header-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 38px;
+    color: var(--text);
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+  .add-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.15s, opacity 0.15s;
+  }
+  .add-btn:active { transform: scale(0.92); opacity: 0.85; }
+  .add-btn svg { width: 20px; height: 20px; }
+
+  /* Body scroll */
+  .scroll-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 0 120px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Section */
+  .section-head {
+    padding: 20px 24px 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text3);
+  }
+  .section-count {
+    font-size: 10px;
+    background: var(--surface2);
+    color: var(--text3);
+    border-radius: 20px;
+    padding: 1px 7px;
+  }
+
+  /* Task */
+  .task-list { padding: 0 16px; display: flex; flex-direction: column; gap: 2px; }
+
+  .task {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 14px;
+    border-radius: 12px;
+    background: var(--surface);
+    transition: background 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .task.new-flash {
+    animation: flashIn 0.6s ease-out;
+  }
+  @keyframes flashIn {
+    0% { background: var(--accent-dim); transform: translateY(-4px); opacity: 0; }
+    30% { background: var(--accent-dim); transform: translateY(0); opacity: 1; }
+    100% { background: var(--surface); }
+  }
+  .task.removing {
+    animation: slideOut 0.3s ease-in forwards;
+  }
+  @keyframes slideOut {
+    to { opacity: 0; transform: translateX(20px); max-height: 0; padding: 0; margin: 0; }
+  }
+
+  /* Checkbox */
+  .cb {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border2);
+    flex-shrink: 0;
+    margin-top: 1px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: border-color 0.2s, background 0.2s;
+    background: transparent;
+  }
+  .cb:active { transform: scale(0.88); }
+  .cb.checked {
+    background: var(--done-color);
+    border-color: var(--done-color);
+  }
+  .cb.checked svg { display: block; }
+  .cb svg { display: none; width: 11px; height: 11px; }
+
+  /* Task content */
+  .task-body { flex: 1; min-width: 0; }
+  .task-title-text {
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--text);
+    line-height: 1.4;
+    word-break: break-word;
+  }
+  .task-title-text.done {
+    color: var(--text3);
+    text-decoration: line-through;
+    text-decoration-color: var(--text3);
+  }
+  .task-date {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 3px;
+  }
+
+  /* Repeat button */
+  .repeat-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s, border-color 0.15s, transform 0.15s;
+    margin-top: -2px;
+  }
+  .repeat-btn:active { transform: scale(0.88); background: var(--accent-dim); border-color: var(--accent); }
+  .repeat-btn svg { width: 15px; height: 15px; }
+
+  /* Divider between sections */
+  .section-divider {
+    margin: 16px 24px;
+    border: none;
+    border-top: 1px solid var(--border);
+  }
+
+  /* Empty states */
+  .empty {
+    text-align: center;
+    padding: 28px 24px;
+    color: var(--text3);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .empty-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+    opacity: 0.4;
+  }
+
+  /* Bottom sheet */
+  .sheet-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 100;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    backdrop-filter: blur(2px);
+  }
+  .sheet-overlay.open { opacity: 1; pointer-events: all; }
+
+  .sheet {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    background: var(--surface);
+    border-radius: 20px 20px 0 0;
+    padding: 12px 24px 40px;
+    z-index: 101;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .sheet.open { transform: translateY(0); }
+
+  .sheet-handle {
+    width: 36px; height: 4px;
+    border-radius: 2px;
+    background: var(--border2);
+    margin: 0 auto 20px;
+  }
+  .sheet-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+  .sheet-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.15s;
+    margin-bottom: 14px;
+  }
+  .sheet-input:focus { border-color: var(--accent); }
+  .sheet-input::placeholder { color: var(--text3); }
+
+  .sheet-submit {
+    width: 100%;
+    background: var(--accent);
+    color: var(--accent-text);
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .sheet-submit:active { opacity: 0.85; transform: scale(0.98); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-size: 13px;
+    padding: 10px 18px;
+    border-radius: 100px;
+    white-space: nowrap;
+    z-index: 200;
+    transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  /* Install banner */
+  .install-banner {
+    margin: 8px 16px 0;
+    background: var(--accent-dim);
+    border: 1px solid rgba(200,240,96,0.2);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .install-banner.hidden { display: none; }
+  .install-x {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-title">Tasks</div>
+    <button class="add-btn" onclick="openSheet()" aria-label="Add task">
+      <svg viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="#0f0f0f" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <div id="install-banner" class="install-banner hidden">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 7l3 3 3-3M3 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Tap to install as an app on your home screen
+    <button class="install-x" onclick="dismissInstall(event)">×</button>
+  </div>
+
+  <div class="scroll-area">
+    <div class="section-head">
+      <span class="section-label">Open</span>
+      <span class="section-count" id="open-count">0</span>
+    </div>
+    <div class="task-list" id="open-list"></div>
+
+    <hr class="section-divider">
+
+    <div class="section-head">
+      <span class="section-label">Done</span>
+      <span class="section-count" id="done-count">0</span>
+    </div>
+    <div class="task-list" id="done-list"></div>
+  </div>
+</div>
+
+<!-- Add task sheet -->
+<div class="sheet-overlay" id="overlay" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">New task</div>
+  <input class="sheet-input" id="task-input" type="text" placeholder="What needs doing?" maxlength="120">
+  <button class="sheet-submit" onclick="addTask()">Add task</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = 'tasks_v1';
+
+let tasks = [];
+let deferredInstall = null;
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+}
+
+function load() {
+  try {
+    const d = localStorage.getItem(STORAGE_KEY);
+    tasks = d ? JSON.parse(d) : [];
+  } catch(e) { tasks = []; }
+  if (!tasks.length) seedSample();
+}
+
+function seedSample() {
+  tasks = [
+    { id: uid(), title: 'Take out garbage', created: daysAgo(2), done: false },
+    { id: uid(), title: 'Buy milk', created: daysAgo(1), done: false },
+  ];
+  save();
+}
+
+function daysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString();
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+}
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function render() {
+  const open = tasks.filter(t => !t.done);
+  const done = tasks.filter(t => t.done);
+
+  document.getElementById('open-count').textContent = open.length;
+  document.getElementById('done-count').textContent = done.length;
+
+  renderList('open-list', open, false);
+  renderList('done-list', done, true);
+}
+
+function renderList(id, items, isDone) {
+  const el = document.getElementById(id);
+  el.innerHTML = '';
+
+  if (!items.length) {
+    const emp = document.createElement('div');
+    emp.className = 'empty';
+    if (!isDone) {
+      emp.innerHTML = '<div class="empty-icon">✓</div>Nothing to do — enjoy the break!';
+    } else {
+      emp.innerHTML = '<div class="empty-icon">○</div>Completed tasks show up here';
+    }
+    el.appendChild(emp);
+    return;
+  }
+
+  items.forEach(task => {
+    const div = document.createElement('div');
+    div.className = 'task';
+    div.dataset.id = task.id;
+    if (task._flash) { div.classList.add('new-flash'); delete task._flash; }
+
+    const dateStr = isDone
+      ? `Created ${fmtDate(task.created)}${task.completedAt ? ' · Done ' + fmtDate(task.completedAt) : ''}`
+      : `Added ${fmtDate(task.created)}${task.repeatedFrom ? ' · repeated' : ''}`;
+
+    div.innerHTML = `
+      <div class="cb ${isDone ? 'checked' : ''}" onclick="toggleTask('${task.id}')">
+        <svg viewBox="0 0 11 8" fill="none"><path d="M1 4l3 3 6-6" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div class="task-body">
+        <div class="task-title-text ${isDone ? 'done' : ''}">${esc(task.title)}</div>
+        <div class="task-date">${dateStr}</div>
+      </div>
+      ${isDone ? `<button class="repeat-btn" onclick="repeatTask('${task.id}')" title="Repeat as new task" aria-label="Repeat task">
+        <svg viewBox="0 0 15 15" fill="none">
+          <path d="M2 5.5A5 5 0 0 1 12.5 7.5" stroke="#4a9970" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M13 9.5A5 5 0 0 1 2.5 7.5" stroke="#4a9970" stroke-width="1.5" stroke-linecap="round"/>
+          <polyline points="10.5,2.5 12.5,5 14.5,2.5" stroke="#4a9970" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="4.5,12.5 2.5,10 0.5,12.5" stroke="#4a9970" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>` : ''}
+    `;
+    el.appendChild(div);
+  });
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function toggleTask(id) {
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  t.done = !t.done;
+  if (t.done) t.completedAt = new Date().toISOString();
+  else delete t.completedAt;
+  save();
+  render();
+  showToast(t.done ? 'Marked done ✓' : 'Moved back to open');
+}
+
+function repeatTask(id) {
+  const original = tasks.find(t => t.id === id);
+  if (!original) return;
+  const newTask = {
+    id: uid(),
+    title: original.title,
+    created: new Date().toISOString(),
+    done: false,
+    repeatedFrom: original.id,
+    _flash: true,
+  };
+  tasks.unshift(newTask);
+  save();
+  render();
+  showToast(`"${original.title}" added to Open`);
+}
+
+function addTask() {
+  const input = document.getElementById('task-input');
+  const title = input.value.trim();
+  if (!title) { input.focus(); return; }
+  const t = { id: uid(), title, created: new Date().toISOString(), done: false, _flash: true };
+  tasks.unshift(t);
+  save();
+  render();
+  closeSheet();
+  input.value = '';
+}
+
+// Sheet
+function openSheet() {
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+  setTimeout(() => document.getElementById('task-input').focus(), 350);
+}
+function closeSheet() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('sheet').classList.remove('open');
+}
+
+// Enter key
+document.getElementById('task-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addTask();
+});
+
+// Toast
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// PWA install
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstall = e;
+  document.getElementById('install-banner').classList.remove('hidden');
+});
+
+document.getElementById('install-banner').addEventListener('click', async () => {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  const { outcome } = await deferredInstall.userChoice;
+  if (outcome === 'accepted') {
+    document.getElementById('install-banner').classList.add('hidden');
+  }
+  deferredInstall = null;
+});
+
+function dismissInstall(e) {
+  e.stopPropagation();
+  document.getElementById('install-banner').classList.add('hidden');
+}
+
+// Service worker for offline
+if ('serviceWorker' in navigator) {
+  const sw = `
+    const CACHE = 'tasks-v1';
+    self.addEventListener('install', e => {
+      e.waitUntil(caches.open(CACHE).then(c => c.add('/')));
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+    });
+  `;
+  const blob = new Blob([sw], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob));
+}
+
+load();
+render();
+</script>
+</body>
+</html>
